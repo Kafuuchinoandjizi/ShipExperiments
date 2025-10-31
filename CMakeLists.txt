@@ -8,4 +8,5 @@ add_executable(main.cpp
         dsp.cpp
         7102.cpp
         7203.cpp
-        7204.cpp)
+        7204.cpp
+        7206_arm.cpp)
