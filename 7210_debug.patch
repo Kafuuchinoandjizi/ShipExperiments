@@ -1,0 +1,91 @@
+--- 7210.cpp
++++ 7210_debug.cpp
+@@ -37,6 +37,29 @@
+ #define USE_NEON 0
+ #endif
+
++// ========================= Debug Dump =========================
++#define DEBUG_DUMP 1
++#if DEBUG_DUMP
++static void dump_float_image(const char* fn, float* d, int n) {
++    FILE* f = fopen(fn, "wb");
++    if(!f) return;
++    fwrite(d, sizeof(float), n, f);
++    fclose(f);
++}
++static void dump_u8_image(const char* fn, unsigned char* d, int n) {
++    FILE* f = fopen(fn, "wb");
++    if(!f) return;
++    fwrite(d, 1, n, f);
++    fclose(f);
++}
++#endif
++
+@@ -1275,6 +1298,10 @@
+     float norm_factor = 1.0f / 16383.0f;
+
+ #ifdef __ARM_NEON
++#if DEBUG_DUMP
++    dump_float_image("debug_raw14.raw", (float*)image_14bit->data, size);
++#endif
++
+     float32x4_t v_norm = vdupq_n_f32(norm_factor);
+     #pragma omp parallel for num_threads(NUM_THREADS) schedule(static, 256)
+     for (int i = 0; i < size; i += 4) {
+@@ -1310,6 +1337,10 @@
+ #endif
+
++#if DEBUG_DUMP
++dump_float_image("debug_norm.raw", image_norm->data, size);
++#endif
++
+     // Step 2: Guided filter
+     ImageF *base_layer = guided_filter(image_norm, radius, eps);
+@@ -1318,6 +1349,10 @@
+ #endif
+
++#if DEBUG_DUMP
++dump_float_image("debug_base.raw", base_layer->data, size);
++#endif
++
+     ImageF *detail_layer = create_image_f_fpga(w, h);
+
+ #ifdef __ARM_NEON
+@@ -1335,6 +1370,10 @@
+ #endif
+
++#if DEBUG_DUMP
++dump_float_image("debug_detail.raw", detail_layer->data, size);
++#endif
++
+     // Step 3: Log transform
+     ImageF *base_log = create_image_f_fpga(w, h);
+     float c = 1.0f / logf(2.0f);
+@@ -1346,6 +1385,10 @@
+         base_log->data[i] = c * logf(1.0f + base_layer->data[i]);
+ #endif
+
++#if DEBUG_DUMP
++dump_float_image("debug_log.raw", base_log->data, size);
++#endif
++
+     // Step 4: Compress and fuse
+     float min_val = get_percentile(base_log, min_percentile);
+     float max_val = get_percentile(base_log, max_percentile);
+@@ -1397,6 +1440,10 @@
+ #endif
+
++#if DEBUG_DUMP
++dump_float_image("debug_fused.raw", fused->data, size);
++#endif
++
+     // Step 5: Convert to 8-bit
+     float fmin = FLT_MAX, fmax = -FLT_MAX;
+@@ -1450,6 +1497,10 @@
+ #endif
+
++#if DEBUG_DUMP
++dump_u8_image("debug_output_8bit.raw", img8->data, size);
++#endif
++
+     // Cleanup intermediate images
